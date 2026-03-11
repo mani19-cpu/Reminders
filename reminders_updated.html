@@ -1,0 +1,1619 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>Reminders</title>
+<link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="icon.png"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-title" content="Reminders"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="theme-color" content="#a855f7"/>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23a855f7'/><text x='32' y='46' font-family='Georgia,serif' font-size='40' font-weight='bold' fill='white' text-anchor='middle'>R</text></svg>"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --red:#e60023;--bg:#f5f3ef;--surface:#fff;--border:#e6e1d8;
+  --text:#111;--muted:#777;--radius:16px;--shadow:0 2px 12px rgba(0,0,0,.10);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+/* HEADER */
+#header{
+position:fixed;top:0;left:0;right:0;z-index:200;
+background:rgba(245,243,239,.95);backdrop-filter:blur(10px);
+display:flex;align-items:center;gap:12px;padding:10px 20px;padding-top:calc(10px + env(safe-area-inset-top));
+border-bottom:1px solid transparent;
+border-image:linear-gradient(90deg,transparent,#e6e1d8 20%,#e6e1d8 80%,transparent) 1;
+}
+#logo-icon{
+width:40px;height:40px;border-radius:10px;flex-shrink:0;
+background:linear-gradient(135deg,#6366f1,#a855f7,#ec4899);
+display:flex;align-items:center;justify-content:center;
+box-shadow:0 3px 12px rgba(168,85,247,.35);
+}
+#logo-icon svg{width:22px;height:22px;fill:white}
+#logo-text{
+font-size:1.45rem;font-weight:800;letter-spacing:-.5px;
+background:linear-gradient(135deg,#6366f1,#a855f7,#ec4899);
+-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+#header-mid{flex:1;display:flex;align-items:center;gap:8px}
+#board-back{
+display:none;align-items:center;gap:6px;background:none;border:none;
+cursor:pointer;font-size:.95rem;color:var(–muted);padding:6px 10px;
+border-radius:8px;transition:.15s;
+}
+#board-back:hover{background:#eee;color:var(–text)}
+#board-back svg{width:18px;height:18px}
+#board-title{font-weight:700;font-size:1.05rem;color:var(–text)}
+#header-actions{display:flex;gap:8px;align-items:center}
+.icon-btn{
+width:38px;height:38px;border-radius:50%;background:none;border:none;
+cursor:pointer;display:flex;align-items:center;justify-content:center;
+transition:.15s;color:var(–text);
+}
+.icon-btn:hover{background:#e6e1d8}
+.icon-btn svg{width:22px;height:22px}
+
+/* HOME */
+#home-view{padding:80px 24px 40px;padding-top:calc(80px + env(safe-area-inset-top))}
+#home-view h2{font-size:1.2rem;font-weight:700;margin-bottom:16px;color:var(–muted)}
+#boards-grid{
+display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px;
+}
+.board-card{
+background:var(–surface);border-radius:var(–radius);overflow:hidden;
+box-shadow:var(–shadow);cursor:pointer;transition:.2s;position:relative;
+user-select:none;
+}
+.board-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.13)}
+.board-settings-btn{
+position:absolute;top:8px;right:8px;z-index:15;
+width:30px;height:30px;border-radius:8px;border:none;
+background:rgba(0,0,0,.45);color:#fff;font-size:1.25rem;line-height:1;
+cursor:pointer;display:flex;align-items:center;justify-content:center;
+opacity:0;transition:opacity .15s,background .15s;
+}
+.board-card:hover .board-settings-btn{opacity:1}
+.board-settings-btn:hover{background:rgba(0,0,0,.7)}
+.board-menu{
+position:absolute;inset:0;z-index:20;border-radius:var(–radius);
+background:rgba(255,255,255,.97);
+display:flex;flex-direction:column;align-items:stretch;justify-content:center;gap:7px;
+padding:16px;opacity:0;pointer-events:none;transition:opacity .15s;
+}
+.board-card.menu-open .board-menu{opacity:1;pointer-events:auto}
+.board-menu-item{
+padding:10px 14px;font-size:.87rem;font-weight:600;cursor:pointer;
+border:none;border-radius:9px;text-align:left;transition:.12s;
+background:#f5f3ef;color:var(–text);
+}
+.board-menu-item:hover{background:#e6e1d8}
+.board-menu-item.danger{color:#dc2626;background:#fee2e2}
+.board-menu-item.danger:hover{background:#fecaca}
+.board-menu-item.cancel{color:var(–muted);background:none}
+.board-menu-item.cancel:hover{background:#f0eee9}
+.board-card.drag-over{outline:2.5px solid #3b82f6;outline-offset:2px}
+.board-card.dragging-source{opacity:.4}
+.board-preview{display:grid;grid-template-columns:2fr 1fr;height:130px;gap:2px;background:#eee}
+.board-preview-cell{background:#ddd;overflow:hidden}
+.board-preview-cell img{width:100%;height:100%;object-fit:cover}
+.board-preview-main{grid-row:1/3}
+.board-preview-cover{width:100%;height:130px;background-size:cover;background-position:center}
+.board-info{padding:10px 14px 13px}
+.board-info h3{font-size:.98rem;font-weight:700;margin-bottom:2px}
+.board-info span{font-size:.8rem;color:var(–muted)}
+.new-board-card{
+background:var(–surface);border-radius:var(–radius);
+border:2.5px dashed var(–border);display:flex;flex-direction:column;
+align-items:center;justify-content:center;gap:10px;min-height:180px;
+cursor:pointer;transition:.2s;color:var(–muted);
+}
+.new-board-card:hover{border-color:var(–red);color:var(–red);background:#fff8f8}
+.new-board-card .plus{font-size:2.2rem;font-weight:300;line-height:1}
+.new-board-card span{font-size:.9rem;font-weight:600}
+
+/* BOARD / CANVAS */
+#board-view{display:none;padding-top:calc(62px + env(safe-area-inset-top));position:relative}
+#canvas-wrap{overflow:auto;width:100%;height:calc(100vh - 62px - env(safe-area-inset-top));touch-action:pan-x pan-y}
+#canvas{
+width:3600px;height:2800px;position:relative;
+background-color:#f5f3ef;
+background-image:radial-gradient(circle,#ccc 1px,transparent 1px);
+background-size:28px 28px;
+}
+#canvas-empty{
+position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+text-align:center;pointer-events:none;
+}
+#canvas-empty .empty-icon{font-size:3.5rem;margin-bottom:12px;opacity:.3}
+#canvas-empty p{color:var(–muted);font-size:1rem}
+
+/* FAB */
+#fab{
+position:fixed;bottom:28px;right:28px;z-index:150;
+width:56px;height:56px;border-radius:50%;
+background:linear-gradient(135deg,#6366f1,#a855f7,#ec4899);
+border:none;cursor:pointer;color:#fff;
+display:none;align-items:center;justify-content:center;
+box-shadow:0 4px 18px rgba(168,85,247,.4);transition:.2s;
+}
+#fab:hover{transform:scale(1.08)}
+#fab svg{width:28px;height:28px}
+
+/* PIN CARDS */
+.pin-card{
+position:absolute;border-radius:14px;overflow:hidden;
+box-shadow:0 2px 10px rgba(0,0,0,.10);
+transition:box-shadow .2s;
+background:var(–surface);
+}
+.pin-card:hover{box-shadow:0 6px 22px rgba(0,0,0,.17)}
+.pin-card.pin-highlight{outline:3px solid #3b82f6;outline-offset:1px}
+.pin-bar{
+height:38px;display:flex;align-items:center;justify-content:center;
+cursor:grab;position:relative;flex-shrink:0;
+}
+.pin-bar:active{cursor:grabbing}
+.pin-handle{
+display:grid;grid-template-columns:repeat(3,5px);grid-template-rows:repeat(2,5px);
+gap:3px;opacity:.55;
+}
+.pin-handle span{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.9)}
+.pin-body{padding:10px 12px 10px}
+.pin-body h4{font-size:.88rem;font-weight:700;margin-bottom:3px;word-break:break-word}
+.pin-body p{font-size:.78rem;color:var(–muted);line-height:1.45;word-break:break-word}
+.pin-tag{
+display:inline-block;margin-top:5px;font-size:.7rem;
+background:#f0eee9;border-radius:20px;padding:2px 8px;color:var(–muted);
+}
+.pin-img{width:100%;display:block;max-height:220px;object-fit:cover}
+.pin-shapes{display:flex;flex-wrap:wrap;gap:4px;padding:4px 12px 6px}
+.pin-actions{
+display:flex;gap:6px;padding:0 10px;opacity:0;max-height:0;overflow:hidden;transition:opacity .18s,max-height .18s,padding .18s;
+}
+.pin-card:hover .pin-actions{opacity:1;max-height:50px;padding:6px 10px 10px;}
+.pin-btn{
+flex:1;padding:5px;border-radius:8px;border:1px solid var(–border);
+background:var(–surface);cursor:pointer;font-size:.75rem;
+font-weight:600;color:var(–text);transition:.15s;
+}
+.pin-btn:hover{background:#f5f3ef}
+.pin-btn.del{color:#e60023;border-color:#fecdd3}
+.pin-btn.del:hover{background:#fff1f2}
+.pin-resize{
+position:absolute;bottom:0;right:0;width:20px;height:20px;
+cursor:nwse-resize;opacity:0;transition:.18s;
+display:flex;align-items:flex-end;justify-content:flex-end;
+padding:3px;
+}
+.pin-card:hover .pin-resize{opacity:1}
+.pin-resize svg{width:11px;height:11px}
+
+/* SNAP GUIDELINES */
+.snap-line{
+position:absolute;background:#3b82f6;pointer-events:none;z-index:100;opacity:.7;
+}
+.snap-line.h{height:1px;left:0;right:0}
+.snap-line.v{width:1px;top:0;bottom:0}
+
+/* MODAL */
+.overlay{
+position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:400;
+display:flex;align-items:center;justify-content:center;
+animation:fadeIn .15s ease;
+}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{
+background:var(–surface);border-radius:20px;
+box-shadow:0 20px 60px rgba(0,0,0,.2);
+width:min(500px,95vw);max-height:90vh;overflow-y:auto;
+animation:slideUp .2s ease;position:relative;
+}
+@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}
+.modal-header{
+padding:18px 20px 12px;display:flex;justify-content:space-between;align-items:center;
+position:sticky;top:0;background:var(–surface);z-index:10;
+border-bottom:1px solid var(–border);
+}
+.modal-header h2{font-size:1.1rem;font-weight:800}
+.modal-close{
+width:32px;height:32px;border-radius:50%;background:none;border:none;
+cursor:pointer;display:flex;align-items:center;justify-content:center;
+font-size:1.3rem;color:var(–muted);transition:.15s;
+}
+.modal-close:hover{background:#f0eee9}
+.modal-body{padding:18px 20px 24px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:.8rem;font-weight:700;color:var(–muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
+.field input,.field textarea{
+width:100%;border:1.5px solid var(–border);border-radius:10px;
+padding:9px 12px;font-size:.9rem;font-family:inherit;
+transition:.15s;outline:none;background:var(–surface);color:var(–text);
+}
+.field input:focus,.field textarea:focus{border-color:var(–red)}
+.field textarea{resize:vertical;min-height:80px}
+
+/* COLOR SWATCHES */
+.color-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.color-swatch{
+height:36px;border-radius:9px;cursor:pointer;border:2.5px solid transparent;
+transition:.15s;position:relative;
+}
+.color-swatch:hover{transform:scale(1.1)}
+.color-swatch.selected{border-color:var(–text);transform:scale(1.08)}
+
+/* IMAGE UPLOAD */
+#img-preview-wrap{position:relative;margin-bottom:10px}
+#img-preview{width:100%;max-height:200px;object-fit:cover;border-radius:10px;display:none}
+#img-remove{
+position:absolute;top:6px;right:6px;background:rgba(0,0,0,.6);
+border:none;border-radius:50%;width:26px;height:26px;
+cursor:pointer;color:#fff;font-size:1rem;display:none;
+align-items:center;justify-content:center;
+}
+.upload-area{
+border:2px dashed var(–border);border-radius:10px;padding:20px;
+text-align:center;cursor:pointer;transition:.15s;color:var(–muted);font-size:.85rem;
+}
+.upload-area:hover{border-color:var(–red);color:var(–red);background:#fff8f8}
+input[type=file]{display:none}
+
+/* SHAPES */
+.shapes-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.shape-btn{
+width:36px;height:36px;border-radius:9px;border:2px solid var(–border);
+background:var(–surface);cursor:pointer;display:flex;align-items:center;justify-content:center;
+transition:.15s;padding:4px;
+}
+.shape-btn:hover{border-color:#94a3b8}
+.shape-btn.selected{border-color:var(–text)}
+.shape-btn svg{width:22px;height:22px}
+.shape-colors{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.shape-color-dot{
+width:24px;height:24px;border-radius:50%;cursor:pointer;
+border:2.5px solid transparent;transition:.15s;
+}
+.shape-color-dot:hover{transform:scale(1.15)}
+.shape-color-dot.selected{border-color:var(–text)}
+.shapes-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;min-height:4px}
+.shape-pill{
+display:flex;align-items:center;gap:4px;background:#f5f3ef;
+border-radius:20px;padding:3px 8px 3px 4px;font-size:.75rem;
+}
+.shape-pill svg{width:16px;height:16px}
+.shape-pill button{background:none;border:none;cursor:pointer;color:var(–muted);font-size:.9rem;line-height:1;padding:0 2px}
+.add-shape-btn{
+padding:7px 14px;border-radius:9px;border:1.5px solid var(–border);
+background:var(–surface);cursor:pointer;font-size:.82rem;font-weight:600;
+transition:.15s;margin-bottom:8px;display:inline-block;
+}
+.add-shape-btn:hover{background:#f5f3ef}
+
+/* MODAL SAVE BTN */
+.save-btn{
+width:100%;padding:11px;border-radius:12px;border:none;
+background:linear-gradient(135deg,#6366f1,#a855f7,#ec4899);
+color:#fff;font-size:.95rem;font-weight:700;cursor:pointer;transition:.15s;margin-top:4px;
+}
+.save-btn:hover{opacity:.9;transform:translateY(-1px)}
+
+/* SEARCH OVERLAY */
+#search-overlay{
+position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.35);
+animation:fadeIn .15s;
+}
+#search-box{
+position:absolute;top:70px;left:50%;transform:translateX(-50%);
+width:min(580px,96vw);background:var(–surface);
+border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,.22);
+overflow:hidden;animation:slideUp .18s ease;max-height:80vh;display:flex;flex-direction:column;
+}
+#search-input-wrap{padding:14px 16px;border-bottom:1px solid var(–border);display:flex;align-items:center;gap:10px;flex-shrink:0}
+#search-input-wrap svg{width:20px;height:20px;color:var(–muted);flex-shrink:0}
+#search-input{
+flex:1;border:none;outline:none;font-size:1rem;
+font-family:inherit;background:none;color:var(–text);
+}
+#search-results{overflow-y:auto;padding:8px 0 8px}
+.search-section-title{
+padding:6px 16px 4px;font-size:.72rem;font-weight:800;
+color:var(–muted);text-transform:uppercase;letter-spacing:.06em;
+}
+.search-result-item{
+display:flex;align-items:center;gap:12px;padding:9px 16px;
+cursor:pointer;transition:.13s;
+}
+.search-result-item:hover{background:#f5f3ef}
+.sr-thumb{
+width:40px;height:40px;border-radius:8px;flex-shrink:0;overflow:hidden;
+}
+.sr-thumb-color{width:100%;height:100%}
+.sr-info{flex:1;min-width:0}
+.sr-title{font-size:.88rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sr-sub{font-size:.76rem;color:var(–muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#search-empty{padding:32px 16px;text-align:center;color:var(–muted);font-size:.9rem}
+
+/* BOARD DRAG GHOST */
+#drag-ghost{
+position:fixed;pointer-events:none;z-index:999;
+border-radius:var(–radius);overflow:hidden;
+box-shadow:0 16px 48px rgba(0,0,0,.25);
+transform:rotate(2deg) scale(1.04);opacity:.95;
+}
+
+/* EXPORT/IMPORT MENU */
+#data-menu-wrap{position:relative}
+#data-menu{
+position:absolute;top:calc(100% + 8px);right:0;
+background:var(–surface);border-radius:14px;
+box-shadow:0 8px 32px rgba(0,0,0,.18);
+border:1px solid var(–border);
+min-width:190px;overflow:hidden;
+display:none;z-index:300;
+animation:slideUp .15s ease;
+}
+#data-menu.open{display:block}
+.data-menu-item{
+display:flex;align-items:center;gap:10px;
+padding:11px 16px;cursor:pointer;font-size:.88rem;font-weight:600;
+border:none;background:none;width:100%;text-align:left;color:var(–text);
+transition:.12s;
+}
+.data-menu-item:hover{background:#f5f3ef}
+.data-menu-item svg{width:18px;height:18px;flex-shrink:0;color:var(–muted)}
+.data-menu-item .dm-label{flex:1}
+.data-menu-item .dm-sub{font-size:.72rem;font-weight:400;color:var(–muted);display:block;margin-top:1px}
+#data-menu-divider{height:1px;background:var(–border);margin:2px 0}
+
+/* TOAST */
+#toast{
+position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(80px);
+background:#111;color:#fff;padding:10px 20px;border-radius:30px;
+font-size:.85rem;font-weight:600;z-index:9999;
+transition:transform .25s ease, opacity .25s ease;opacity:0;pointer-events:none;
+white-space:nowrap;
+}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+</style>
+
+</head>
+<body>
+
+<!-- HEADER -->
+
+<div id="header">
+  <div id="logo-icon">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z" fill="white"/>
+    </svg>
+  </div>
+  <div id="header-mid">
+    <span id="logo-text">Reminders</span>
+    <button id="board-back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      Home
+    </button>
+    <span id="board-title"></span>
+  </div>
+  <div id="header-actions">
+    <button class="icon-btn" id="search-btn" title="Search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </button>
+
+```
+<!-- DATA MENU BUTTON -->
+<div id="data-menu-wrap">
+  <button class="icon-btn" id="data-menu-btn" title="Export / Import data">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+      <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4.03 3-9 3S3 13.66 3 12"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/>
+    </svg>
+  </button>
+  <div id="data-menu">
+    <button class="data-menu-item" id="export-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <span class="dm-label">Export data<span class="dm-sub">Save a backup file</span></span>
+    </button>
+    <div id="data-menu-divider"></div>
+    <button class="data-menu-item" id="import-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <span class="dm-label">Import data<span class="dm-sub">Restore from backup</span></span>
+    </button>
+    <input type="file" id="import-file-input" accept=".json"/>
+  </div>
+</div>
+
+<button class="icon-btn" id="install-btn" title="Add to Phone" style="display:none">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18" stroke-linecap="round" stroke-width="2.5"/></svg>
+</button>
+<button id="new-board-header-btn" title="New Board" style="display:none;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;border:none;background:linear-gradient(135deg,#818cf8,#a78bfa,#c084fc);color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;">+ New Board</button>
+```
+
+  </div>
+</div>
+
+<!-- HOME VIEW -->
+
+<div id="home-view">
+  <h2>Your Boards</h2>
+  <div id="boards-grid"></div>
+</div>
+
+<!-- BOARD VIEW -->
+
+<div id="board-view">
+  <div id="canvas-wrap">
+    <div id="canvas">
+      <div id="canvas-empty">
+        <div class="empty-icon">📌</div>
+        <p>Click + to add your first pin</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FAB -->
+
+<button id="fab">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+</button>
+
+<!-- PIN MODAL -->
+
+<div id="pin-overlay" class="overlay" style="display:none">
+  <div class="modal" id="pin-modal">
+    <div class="modal-header">
+      <h2 id="pin-modal-title">New Pin</h2>
+      <button class="modal-close" id="pin-modal-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Image</label>
+        <div id="img-preview-wrap">
+          <img id="img-preview" alt=""/>
+          <button id="img-remove" style="display:none">&times;</button>
+        </div>
+        <div class="upload-area" id="upload-area">
+          <input type="file" id="img-input" accept="image/*"/>
+          Click to upload image
+        </div>
+      </div>
+      <div class="field">
+        <label>Title</label>
+        <input type="text" id="pin-title" placeholder="Pin title"/>
+      </div>
+      <div class="field">
+        <label>Note</label>
+        <textarea id="pin-content" placeholder="Add a note..."></textarea>
+      </div>
+      <div class="field">
+        <label>Tag</label>
+        <input type="text" id="pin-tag" placeholder="#tag"/>
+      </div>
+      <div class="field">
+        <label>Color</label>
+        <div class="color-grid" id="color-grid"></div>
+      </div>
+      <div class="field">
+        <label>Shapes</label>
+        <div class="shapes-row" id="shape-type-row"></div>
+        <div class="shape-colors" id="shape-color-row"></div>
+        <button class="add-shape-btn" id="add-shape-btn">+ Add Shape</button>
+        <div class="shapes-list" id="shapes-list"></div>
+      </div>
+      <button class="save-btn" id="pin-save">Save Pin</button>
+    </div>
+  </div>
+</div>
+
+<!-- NEW BOARD MODAL -->
+
+<div id="board-overlay" class="overlay" style="display:none">
+  <div class="modal" id="new-board-modal">
+    <div class="modal-header">
+      <h2>New Board</h2>
+      <button class="modal-close" id="board-modal-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Board Name</label>
+        <input type="text" id="new-board-name" placeholder="My Board"/>
+      </div>
+      <button class="save-btn" id="board-save">Create Board</button>
+    </div>
+  </div>
+</div>
+
+<!-- SEARCH OVERLAY -->
+
+<div id="search-overlay" style="display:none">
+  <div id="search-box">
+    <div id="search-input-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="search-input" placeholder="Search boards and pins..."/>
+    </div>
+    <div id="search-results"></div>
+  </div>
+</div>
+
+<!-- BOARD DRAG GHOST -->
+
+<div id="drag-ghost" style="display:none;position:fixed;pointer-events:none;z-index:999;border-radius:16px;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,.25);transform:rotate(2deg) scale(1.04);opacity:.95;"></div>
+
+<!-- TOAST -->
+
+<div id="toast"></div>
+
+<script>
+// ===== DATA =====
+const STORE_KEY = 'reminders-v5';
+const SNAP_THRESHOLD = 8;
+
+const COLORS = [
+  {name:'White',    bar:'#dedede', card:'#ffffff'},
+  {name:'Cream',    bar:'#e8d5b7', card:'#fffdf6'},
+  {name:'Slate',    bar:'#94a3b8', card:'#f8fafc'},
+  {name:'Charcoal', bar:'#475569', card:'#f5f5f5'},
+  {name:'Rose',     bar:'#fb7185', card:'#fff1f2'},
+  {name:'Coral',    bar:'#fb923c', card:'#fff7ed'},
+  {name:'Amber',    bar:'#fbbf24', card:'#fffbeb'},
+  {name:'Lime',     bar:'#a3e635', card:'#f7ffe0'},
+  {name:'Emerald',  bar:'#34d399', card:'#ecfdf5'},
+  {name:'Teal',     bar:'#2dd4bf', card:'#f0fdfa'},
+  {name:'Sky',      bar:'#38bdf8', card:'#f0f9ff'},
+  {name:'Indigo',   bar:'#818cf8', card:'#eef2ff'},
+  {name:'Violet',   bar:'#a78bfa', card:'#f5f3ff'},
+  {name:'Pink',     bar:'#f472b6', card:'#fdf2f8'},
+  {name:'Fuchsia',  bar:'#e879f9', card:'#fdf4ff'},
+  {name:'Berry',    bar:'#c084fc', card:'#faf5ff'},
+];
+
+const SHAPE_COLORS = [
+  '#ef4444','#f97316','#eab308','#22c55e',
+  '#14b8a6','#3b82f6','#6366f1','#8b5cf6',
+  '#ec4899','#111827','#ffffff','#9ca3af'
+];
+
+const SHAPES = {
+  circle:   c => `<circle cx="12" cy="12" r="10" fill="${c}"/>`,
+  square:   c => `<rect x="2" y="2" width="20" height="20" rx="3" fill="${c}"/>`,
+  triangle: c => `<polygon points="12,2 22,21 2,21" fill="${c}"/>`,
+  diamond:  c => `<polygon points="12,1 22,12 12,23 2,12" fill="${c}"/>`,
+  heart:    c => `<path d="M12 21C12 21 3 14.5 3 8.5a4.5 4.5 0 0 1 9-1 4.5 4.5 0 0 1 9 1C21 14.5 12 21 12 21z" fill="${c}"/>`,
+  star:     c => `<polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" fill="${c}"/>`,
+  hexagon:  c => `<polygon points="12,1 21,6.5 21,17.5 12,23 3,17.5 3,6.5" fill="${c}"/>`,
+  pentagon: c => `<polygon points="12,1 22,9 18,21 6,21 2,9" fill="${c}"/>`,
+};
+
+function shapeSVG(type, color, size) {
+  size = size || 24;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">${SHAPES[type](color)}</svg>`;
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+}
+
+let data = { boards: [], view: 'home', curBoard: null };
+
+function loadData() {
+  try {
+    const s = localStorage.getItem(STORE_KEY);
+    if (s) data = JSON.parse(s);
+  } catch(e) {}
+  if (!data.boards || !data.boards.length) {
+    data.boards = [{ id: uid(), name: 'My Reminders', pins: [] }];
+    data.view = 'home';
+    data.curBoard = null;
+  }
+  saveData();
+}
+
+function saveData() {
+  localStorage.setItem(STORE_KEY, JSON.stringify(data));
+}
+
+function getBoard(id) {
+  return data.boards.find(b => b.id === id);
+}
+
+function activeCurBoard() {
+  return getBoard(data.curBoard);
+}
+
+// ===== TOAST =====
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(function() { t.classList.remove('show'); }, 2400);
+}
+
+// ===== EXPORT / IMPORT =====
+const dataMenuBtn = document.getElementById('data-menu-btn');
+const dataMenu = document.getElementById('data-menu');
+
+dataMenuBtn.addEventListener('click', function(e) {
+  e.stopPropagation();
+  dataMenu.classList.toggle('open');
+});
+
+document.addEventListener('click', function(e) {
+  if (!document.getElementById('data-menu-wrap').contains(e.target)) {
+    dataMenu.classList.remove('open');
+  }
+});
+
+document.getElementById('export-btn').addEventListener('click', function() {
+  dataMenu.classList.remove('open');
+  const exportData = JSON.parse(JSON.stringify(data));
+  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const now = new Date();
+  const dateStr = now.getFullYear() + '-' +
+    String(now.getMonth()+1).padStart(2,'0') + '-' +
+    String(now.getDate()).padStart(2,'0');
+  a.href = url;
+  a.download = 'reminders-backup-' + dateStr + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('✅ Data exported!');
+});
+
+document.getElementById('import-btn').addEventListener('click', function() {
+  dataMenu.classList.remove('open');
+  document.getElementById('import-file-input').click();
+});
+
+document.getElementById('import-file-input').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const imported = JSON.parse(ev.target.result);
+      if (!imported.boards || !Array.isArray(imported.boards)) {
+        throw new Error('Invalid format');
+      }
+      if (!confirm('Import this backup? This will replace all your current boards and pins.')) return;
+      data = imported;
+      saveData();
+      // Reset to home view after import
+      data.view = 'home';
+      data.curBoard = null;
+      saveData();
+      renderHome();
+      showToast('✅ Data imported successfully!');
+    } catch(err) {
+      alert('Could not import: the file does not look like a valid Reminders backup.');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+// ===== RENDER HOME =====
+function renderHome() {
+  document.getElementById('home-view').style.display = 'block';
+  document.getElementById('board-view').style.display = 'none';
+  document.getElementById('fab').style.display = 'none';
+  document.getElementById('board-back').style.display = 'none';
+  document.getElementById('board-title').textContent = '';
+  document.getElementById('logo-text').style.display = '';
+  document.getElementById('new-board-header-btn').style.display = 'flex';
+  renderBoards();
+}
+
+function renderBoards() {
+  const grid = document.getElementById('boards-grid');
+  grid.innerHTML = '';
+  data.boards.forEach(function(board, idx) {
+    const card = document.createElement('div');
+    card.className = 'board-card';
+    card.dataset.id = board.id;
+    card.dataset.idx = idx;
+    card.innerHTML = buildBoardCardHTML(board);
+    card.addEventListener('click', function() { openBoard(board.id); });
+    const settingsBtn = card.querySelector('.board-settings-btn');
+    settingsBtn.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+    settingsBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      document.querySelectorAll('.board-card.menu-open').forEach(function(c) { if (c !== card) c.classList.remove('menu-open'); });
+      card.classList.toggle('menu-open');
+    });
+    card.querySelectorAll('.board-menu-item').forEach(function(btn) {
+      btn.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        card.classList.remove('menu-open');
+        const action = btn.dataset.action;
+        if (action === 'delete') { deleteBoard(board.id); }
+        else if (action === 'cover') { triggerBoardCover(board.id); }
+        else if (action === 'remove-cover') {
+          var b = data.boards.find(function(x) { return x.id === board.id; });
+          if (b) { delete b.cover; saveData(); renderBoards(); }
+        }
+      });
+    });
+    setupBoardDrag(card, idx);
+    grid.appendChild(card);
+  });
+}
+
+function buildBoardCardHTML(board) {
+  const pins = board.pins || [];
+  const previewPins = pins.slice(0, 3);
+  let cells = '';
+  for (let i = 0; i < 3; i++) {
+    const pin = previewPins[i];
+    const cls = i === 0 ? 'board-preview-cell board-preview-main' : 'board-preview-cell';
+    if (pin) {
+      const c = COLORS[pin.colorIdx || 0];
+      if (pin.image) {
+        cells += `<div class="${cls}" style="background-image:url('${pin.image}');background-size:cover;background-position:center"></div>`;
+      } else {
+        cells += `<div class="${cls}" style="background:${c.bar}"></div>`;
+      }
+    } else {
+      cells += `<div class="${cls}" style="background:#ede9e2"></div>`;
+    }
+  }
+  const preview = board.cover
+    ? `<div class="board-preview-cover" style="background-image:url('${board.cover}')"></div>`
+    : `<div class="board-preview" style="background:#e6e1d8">${cells}</div>`;
+  return `${preview}
+    <div class="board-info">
+      <h3>${esc(board.name)}</h3>
+      <span>${pins.length} pin${pins.length === 1 ? '' : 's'}</span>
+    </div>
+    <button class="board-settings-btn" title="Board settings">&#x22EE;</button>
+    <div class="board-menu">
+      <button class="board-menu-item" data-action="cover">Cover photo</button>
+      ${board.cover ? '<button class="board-menu-item danger" data-action="remove-cover">Remove cover</button>' : ''}
+      <button class="board-menu-item danger" data-action="delete">Delete board</button>
+      <button class="board-menu-item cancel" data-action="cancel">Cancel</button>
+    </div>`;
+}
+
+function deleteBoard(id) {
+  if (data.boards.length <= 1) { alert('You need at least one board.'); return; }
+  const board = data.boards.find(function(b) { return b.id === id; });
+  if (!board) return;
+  if (!confirm('Delete board "' + board.name + '" and all its pins?')) return;
+  data.boards = data.boards.filter(function(b) { return b.id !== id; });
+  if (data.curBoard === id) data.curBoard = data.boards[0].id;
+  saveData();
+  renderBoards();
+}
+
+function triggerBoardCover(boardId) {
+  var inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = 'image/*';
+  inp.onchange = function() {
+    var file = inp.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      var img = new Image();
+      img.onload = function() {
+        var canvas = document.createElement('canvas');
+        var maxW = 600, maxH = 400;
+        var scale = Math.min(maxW / img.width, maxH / img.height, 1);
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        var board = data.boards.find(function(b) { return b.id === boardId; });
+        if (board) { board.cover = canvas.toDataURL('image/jpeg', 0.8); saveData(); renderBoards(); }
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+  inp.click();
+}
+
+document.addEventListener('click', function() {
+  document.querySelectorAll('.board-card.menu-open').forEach(function(c) { c.classList.remove('menu-open'); });
+});
+
+// ===== BOARD DRAG TO REORDER =====
+var boardDragState = { active: false, srcIdx: null, srcEl: null, offsetX: 0, offsetY: 0, overIdx: null };
+
+function setupBoardDrag(card, idx) {
+  card.addEventListener('mousedown', function(e) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const rect = card.getBoundingClientRect();
+    boardDragState.srcIdx = idx;
+    boardDragState.srcEl = card;
+    boardDragState.offsetX = e.clientX - rect.left;
+    boardDragState.offsetY = e.clientY - rect.top;
+
+    const ghost = document.getElementById('drag-ghost');
+    ghost.innerHTML = card.innerHTML;
+    ghost.style.display = 'block';
+    ghost.style.width = rect.width + 'px';
+    ghost.style.height = rect.height + 'px';
+    ghost.style.left = (e.clientX - boardDragState.offsetX) + 'px';
+    ghost.style.top = (e.clientY - boardDragState.offsetY) + 'px';
+
+    boardDragState.active = true;
+    card.classList.add('dragging-source');
+  });
+}
+
+document.addEventListener('mousemove', function(e) {
+  if (!boardDragState.active) return;
+  const ghost = document.getElementById('drag-ghost');
+  ghost.style.left = (e.clientX - boardDragState.offsetX) + 'px';
+  ghost.style.top = (e.clientY - boardDragState.offsetY) + 'px';
+
+  const cards = Array.from(document.querySelectorAll('.board-card'));
+  let overIdx = null;
+  cards.forEach(function(c, i) {
+    const r = c.getBoundingClientRect();
+    if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) {
+      overIdx = parseInt(c.dataset.idx);
+    }
+  });
+  cards.forEach(function(c, i) {
+    const ci = parseInt(c.dataset.idx);
+    c.classList.toggle('drag-over', overIdx !== null && ci === overIdx && ci !== boardDragState.srcIdx);
+  });
+  boardDragState.overIdx = overIdx;
+});
+
+document.addEventListener('mouseup', function(e) {
+  if (!boardDragState.active) return;
+  boardDragState.active = false;
+  document.getElementById('drag-ghost').style.display = 'none';
+  if (boardDragState.srcEl) boardDragState.srcEl.classList.remove('dragging-source');
+  document.querySelectorAll('.board-card').forEach(function(c) { c.classList.remove('drag-over'); });
+
+  const srcIdx = boardDragState.srcIdx;
+  const overIdx = boardDragState.overIdx;
+  if (overIdx !== null && overIdx !== srcIdx) {
+    const moved = data.boards.splice(srcIdx, 1)[0];
+    data.boards.splice(overIdx, 0, moved);
+    saveData();
+    renderBoards();
+  }
+  boardDragState = { active: false, srcIdx: null, srcEl: null, offsetX: 0, offsetY: 0, overIdx: null };
+});
+
+// ===== OPEN BOARD =====
+function openBoard(id) {
+  data.view = 'board';
+  data.curBoard = id;
+  saveData();
+  const board = getBoard(id);
+  document.getElementById('home-view').style.display = 'none';
+  document.getElementById('board-view').style.display = 'block';
+  document.getElementById('fab').style.display = 'flex';
+  document.getElementById('board-back').style.display = 'flex';
+  document.getElementById('board-title').textContent = board.name;
+  document.getElementById('logo-text').style.display = 'none';
+  document.getElementById('new-board-header-btn').style.display = 'none';
+  renderCanvas();
+}
+
+// ===== CANVAS =====
+function renderCanvas() {
+  const canvas = document.getElementById('canvas');
+  Array.from(canvas.querySelectorAll('.pin-card')).forEach(function(el) { el.remove(); });
+  Array.from(canvas.querySelectorAll('.snap-line')).forEach(function(el) { el.remove(); });
+  const board = activeCurBoard();
+  if (!board) return;
+  document.getElementById('canvas-empty').style.display = board.pins.length ? 'none' : 'block';
+  board.pins.forEach(function(pin) { renderPinEl(pin); });
+}
+
+function renderPinEl(pin) {
+  const canvas = document.getElementById('canvas');
+  const c = COLORS[pin.colorIdx || 0];
+  const el = document.createElement('div');
+  el.className = 'pin-card';
+  el.id = 'pin-' + pin.id;
+  el.style.left = pin.x + 'px';
+  el.style.top = pin.y + 'px';
+  el.style.width = (pin.width || 220) + 'px';
+  el.style.background = c.card;
+
+  const imgHTML = pin.image ? `<img class="pin-img" src="${pin.image}" alt=""/>` : '';
+
+  let shapesHTML = '';
+  if (pin.shapes && pin.shapes.length) {
+    const svgs = pin.shapes.map(function(s) { return shapeSVG(s.type, s.color, 22); }).join('');
+    shapesHTML = `<div class="pin-shapes">${svgs}</div>`;
+  }
+
+  const tagHTML = pin.tag ? `<span class="pin-tag">${esc(pin.tag)}</span>` : '';
+
+  let dots = '';
+  for (let i = 0; i < 6; i++) dots += '<span></span>';
+
+  el.innerHTML = `
+    <div class="pin-bar" style="background:${c.bar}">
+      <div class="pin-handle">${dots}</div>
+    </div>
+    ${imgHTML}
+    ${(pin.title || pin.content || pin.tag) ? `<div class="pin-body">
+      <h4>${esc(pin.title || '')}</h4>
+      <p>${esc(pin.content || '')}</p>
+      ${tagHTML}
+    </div>` : ''}
+    ${shapesHTML}
+    <div class="pin-actions">
+      <button class="pin-btn edit-btn">Edit</button>
+      <button class="pin-btn del del-btn">Delete</button>
+    </div>
+    <div class="pin-resize" title="Resize">
+      <svg viewBox="0 0 10 10" fill="none"><line x1="9" y1="1" x2="1" y2="9" stroke="#888" stroke-width="1.5"/><line x1="9" y1="5" x2="5" y2="9" stroke="#888" stroke-width="1.5"/></svg>
+    </div>
+  `;
+
+  canvas.appendChild(el);
+
+  el.querySelector('.pin-bar').addEventListener('mousedown', function(e) { startPinDrag(e, pin, el); });
+  el.querySelector('.pin-bar').addEventListener('touchstart', function(e) { startPinDrag(e, pin, el); }, { passive: false });
+  el.querySelector('.pin-resize').addEventListener('mousedown', function(e) { startPinResize(e, pin, el); });
+  el.querySelector('.pin-resize').addEventListener('touchstart', function(e) { startPinResize(e, pin, el); }, { passive: false });
+  el.querySelector('.edit-btn').addEventListener('click', function(e) { e.stopPropagation(); openPinModal(pin); });
+  el.querySelector('.del-btn').addEventListener('click', function(e) { e.stopPropagation(); deletePin(pin.id); });
+}
+
+function deletePin(id) {
+  const board = activeCurBoard();
+  if (!board) return;
+  board.pins = board.pins.filter(function(p) { return p.id !== id; });
+  saveData();
+  const el = document.getElementById('pin-' + id);
+  if (el) el.remove();
+  if (!board.pins.length) document.getElementById('canvas-empty').style.display = 'block';
+}
+
+// ===== PIN DRAG =====
+var pinDragState = { active: false };
+
+function startPinDrag(e, pin, el) {
+  if (e.button !== undefined && e.button !== 0) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const wrap = document.getElementById('canvas-wrap');
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  pinDragState = {
+    active: true,
+    pin: pin,
+    el: el,
+    startX: clientX,
+    startY: clientY,
+    origX: pin.x,
+    origY: pin.y,
+    wrap: wrap
+  };
+  el.style.zIndex = 1000;
+}
+
+function onPinDragMove(e) {
+  if (!pinDragState.active) return;
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  const dx = clientX - pinDragState.startX;
+  const dy = clientY - pinDragState.startY;
+  let nx = pinDragState.origX + dx;
+  let ny = pinDragState.origY + dy;
+  nx = Math.max(0, Math.min(3600 - (pinDragState.pin.width || 220), nx));
+  ny = Math.max(0, Math.min(2800 - 60, ny));
+
+  const board = activeCurBoard();
+  const others = board.pins.filter(function(p) { return p.id !== pinDragState.pin.id; });
+  const pw = pinDragState.pin.width || 220;
+  const ph = pinDragState.el.offsetHeight;
+
+  const self = { l: nx, r: nx + pw, cx: nx + pw / 2, t: ny, b: ny + ph, cy: ny + ph / 2 };
+  let snapDX = null, snapDY = null;
+  const lines = [];
+
+  others.forEach(function(op) {
+    const oel = document.getElementById('pin-' + op.id);
+    if (!oel) return;
+    const ow = op.width || 220;
+    const oh = oel.offsetHeight;
+    const o = { l: op.x, r: op.x + ow, cx: op.x + ow / 2, t: op.y, b: op.y + oh, cy: op.y + oh / 2 };
+
+    var xPairs = [[self.l, o.l], [self.l, o.r], [self.r, o.r], [self.r, o.l], [self.cx, o.cx]];
+    xPairs.forEach(function(pair) {
+      if (snapDX === null && Math.abs(pair[0] - pair[1]) < SNAP_THRESHOLD) {
+        snapDX = pair[1] - pair[0];
+        lines.push({ type: 'v', x: pair[1] });
+      }
+    });
+    var yPairs = [[self.t, o.t], [self.t, o.b], [self.b, o.b], [self.b, o.t], [self.cy, o.cy]];
+    yPairs.forEach(function(pair) {
+      if (snapDY === null && Math.abs(pair[0] - pair[1]) < SNAP_THRESHOLD) {
+        snapDY = pair[1] - pair[0];
+        lines.push({ type: 'h', y: pair[1] });
+      }
+    });
+  });
+
+  if (snapDX !== null) nx += snapDX;
+  if (snapDY !== null) ny += snapDY;
+  nx = Math.round(nx); ny = Math.round(ny);
+
+  pinDragState.pin.x = nx;
+  pinDragState.pin.y = ny;
+  pinDragState.el.style.left = nx + 'px';
+  pinDragState.el.style.top = ny + 'px';
+
+  const canvas = document.getElementById('canvas');
+  Array.from(canvas.querySelectorAll('.snap-line')).forEach(function(l) { l.remove(); });
+  lines.forEach(function(line) {
+    const ln = document.createElement('div');
+    if (line.type === 'h') {
+      ln.className = 'snap-line h';
+      ln.style.top = line.y + 'px';
+    } else {
+      ln.className = 'snap-line v';
+      ln.style.left = line.x + 'px';
+    }
+    canvas.appendChild(ln);
+  });
+}
+document.addEventListener('mousemove', onPinDragMove);
+document.addEventListener('touchmove', onPinDragMove, { passive: false });
+
+function onPinDragEnd() {
+  if (!pinDragState.active) return;
+  pinDragState.active = false;
+  if (pinDragState.el) pinDragState.el.style.zIndex = '';
+  const canvas = document.getElementById('canvas');
+  Array.from(canvas.querySelectorAll('.snap-line')).forEach(function(l) { l.remove(); });
+  saveData();
+  pinDragState = { active: false };
+}
+document.addEventListener('mouseup', onPinDragEnd);
+document.addEventListener('touchend', onPinDragEnd);
+
+// ===== PIN RESIZE =====
+var pinResizeState = { active: false };
+
+function startPinResize(e, pin, el) {
+  if (e.button !== undefined && e.button !== 0) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  pinResizeState = { active: true, pin: pin, el: el, startX: clientX, origW: pin.width || 220 };
+}
+
+function onPinResizeMove(e) {
+  if (!pinResizeState.active) return;
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  let nw = pinResizeState.origW + (clientX - pinResizeState.startX);
+  nw = Math.max(160, Math.min(500, nw));
+  pinResizeState.pin.width = Math.round(nw);
+  pinResizeState.el.style.width = nw + 'px';
+}
+document.addEventListener('mousemove', onPinResizeMove);
+document.addEventListener('touchmove', onPinResizeMove, { passive: false });
+
+function onPinResizeEnd() {
+  if (!pinResizeState.active) return;
+  pinResizeState.active = false;
+  saveData();
+  pinResizeState = { active: false };
+}
+document.addEventListener('mouseup', onPinResizeEnd);
+document.addEventListener('touchend', onPinResizeEnd);
+
+// ===== CANVAS ZOOM =====
+var canvasScale = 1;
+var MIN_SCALE = 0.25, MAX_SCALE = 2;
+
+function applyCanvasScale() {
+  var canvas = document.getElementById('canvas');
+  canvas.style.transformOrigin = '0 0';
+  canvas.style.transform = 'scale(' + canvasScale + ')';
+  canvas.style.marginBottom = ((2800 * canvasScale) - 2800) + 'px';
+  canvas.style.marginRight = ((3600 * canvasScale) - 3600) + 'px';
+}
+
+document.getElementById('canvas-wrap').addEventListener('wheel', function(e) {
+  if (!e.ctrlKey && !e.metaKey) return;
+  e.preventDefault();
+  var wrap = document.getElementById('canvas-wrap');
+  var rect = wrap.getBoundingClientRect();
+  var mouseX = e.clientX - rect.left + wrap.scrollLeft;
+  var mouseY = e.clientY - rect.top + wrap.scrollTop;
+  var delta = e.deltaY > 0 ? 0.9 : 1.1;
+  var newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, canvasScale * delta));
+  var ratio = newScale / canvasScale;
+  canvasScale = newScale;
+  applyCanvasScale();
+  wrap.scrollLeft = mouseX * ratio - (e.clientX - rect.left);
+  wrap.scrollTop = mouseY * ratio - (e.clientY - rect.top);
+}, { passive: false });
+
+var pinchState = { active: false, dist: 0, scrollLeft: 0, scrollTop: 0, midX: 0, midY: 0 };
+
+function pinchDist(touches) {
+  var dx = touches[0].clientX - touches[1].clientX;
+  var dy = touches[0].clientY - touches[1].clientY;
+  return Math.sqrt(dx*dx + dy*dy);
+}
+
+document.getElementById('canvas-wrap').addEventListener('touchstart', function(e) {
+  if (e.touches.length === 2) {
+    e.preventDefault();
+    var wrap = document.getElementById('canvas-wrap');
+    pinchState.active = true;
+    pinchState.dist = pinchDist(e.touches);
+    pinchState.scrollLeft = wrap.scrollLeft;
+    pinchState.scrollTop = wrap.scrollTop;
+    var midClientX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+    var midClientY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+    var rect = wrap.getBoundingClientRect();
+    pinchState.midX = midClientX - rect.left + wrap.scrollLeft;
+    pinchState.midY = midClientY - rect.top + wrap.scrollTop;
+  }
+}, { passive: false });
+
+document.getElementById('canvas-wrap').addEventListener('touchmove', function(e) {
+  if (!pinchState.active || e.touches.length !== 2) return;
+  e.preventDefault();
+  var wrap = document.getElementById('canvas-wrap');
+  var newDist = pinchDist(e.touches);
+  var delta = newDist / pinchState.dist;
+  var newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, canvasScale * delta));
+  var ratio = newScale / canvasScale;
+  canvasScale = newScale;
+  pinchState.dist = newDist;
+  applyCanvasScale();
+  var rect = wrap.getBoundingClientRect();
+  var midClientX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+  var midClientY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+  wrap.scrollLeft = pinchState.midX * ratio - (midClientX - rect.left);
+  wrap.scrollTop = pinchState.midY * ratio - (midClientY - rect.top);
+  pinchState.midX = wrap.scrollLeft + (midClientX - rect.left);
+  pinchState.midY = wrap.scrollTop + (midClientY - rect.top);
+}, { passive: false });
+
+document.getElementById('canvas-wrap').addEventListener('touchend', function(e) {
+  if (e.touches.length < 2) pinchState.active = false;
+});
+
+// ===== PIN MODAL =====
+var modalPin = null;
+var modalColorIdx = 0;
+var modalShapeType = 'circle';
+var modalShapeColor = '#ef4444';
+var modalShapes = [];
+var modalImageData = null;
+
+function buildColorGrid() {
+  const grid = document.getElementById('color-grid');
+  grid.innerHTML = '';
+  COLORS.forEach(function(c, i) {
+    const sw = document.createElement('div');
+    sw.className = 'color-swatch' + (i === modalColorIdx ? ' selected' : '');
+    sw.style.background = c.bar;
+    sw.title = c.name;
+    sw.addEventListener('click', function() {
+      modalColorIdx = i;
+      grid.querySelectorAll('.color-swatch').forEach(function(s, j) {
+        s.classList.toggle('selected', j === i);
+      });
+    });
+    grid.appendChild(sw);
+  });
+}
+
+function buildShapeTypes() {
+  const row = document.getElementById('shape-type-row');
+  row.innerHTML = '';
+  Object.keys(SHAPES).forEach(function(type) {
+    const btn = document.createElement('button');
+    btn.className = 'shape-btn' + (type === modalShapeType ? ' selected' : '');
+    btn.title = type;
+    btn.innerHTML = shapeSVG(type, '#555', 22);
+    btn.addEventListener('click', function() {
+      modalShapeType = type;
+      row.querySelectorAll('.shape-btn').forEach(function(b) { b.classList.remove('selected'); });
+      btn.classList.add('selected');
+    });
+    row.appendChild(btn);
+  });
+}
+
+function buildShapeColors() {
+  const row = document.getElementById('shape-color-row');
+  row.innerHTML = '';
+  SHAPE_COLORS.forEach(function(color) {
+    const dot = document.createElement('div');
+    dot.className = 'shape-color-dot' + (color === modalShapeColor ? ' selected' : '');
+    dot.style.background = color;
+    if (color === '#ffffff') dot.style.border = '2px solid #ccc';
+    dot.addEventListener('click', function() {
+      modalShapeColor = color;
+      row.querySelectorAll('.shape-color-dot').forEach(function(d) { d.classList.remove('selected'); });
+      dot.classList.add('selected');
+    });
+    row.appendChild(dot);
+  });
+}
+
+function renderShapesList() {
+  const list = document.getElementById('shapes-list');
+  list.innerHTML = '';
+  modalShapes.forEach(function(s, i) {
+    const pill = document.createElement('div');
+    pill.className = 'shape-pill';
+    pill.innerHTML = shapeSVG(s.type, s.color, 16) + '<button data-i="' + i + '">&times;</button>';
+    pill.querySelector('button').addEventListener('click', function() {
+      modalShapes.splice(i, 1);
+      renderShapesList();
+    });
+    list.appendChild(pill);
+  });
+}
+
+function openPinModal(existingPin) {
+  modalPin = existingPin || null;
+  modalColorIdx = existingPin ? (existingPin.colorIdx || 0) : 0;
+  modalShapes = existingPin ? JSON.parse(JSON.stringify(existingPin.shapes || [])) : [];
+  modalImageData = existingPin ? (existingPin.image || null) : null;
+  modalShapeType = 'circle';
+  modalShapeColor = '#ef4444';
+
+  document.getElementById('pin-modal-title').textContent = existingPin ? 'Edit Pin' : 'New Pin';
+  document.getElementById('pin-title').value = existingPin ? (existingPin.title || '') : '';
+  document.getElementById('pin-content').value = existingPin ? (existingPin.content || '') : '';
+  document.getElementById('pin-tag').value = existingPin ? (existingPin.tag || '') : '';
+
+  const prev = document.getElementById('img-preview');
+  const rem = document.getElementById('img-remove');
+  const area = document.getElementById('upload-area');
+  if (modalImageData) {
+    prev.src = modalImageData;
+    prev.style.display = 'block';
+    rem.style.display = 'flex';
+    area.style.display = 'none';
+  } else {
+    prev.src = '';
+    prev.style.display = 'none';
+    rem.style.display = 'none';
+    area.style.display = 'block';
+  }
+
+  buildColorGrid();
+  buildShapeTypes();
+  buildShapeColors();
+  renderShapesList();
+
+  document.getElementById('pin-overlay').style.display = 'flex';
+  document.getElementById('pin-title').focus();
+}
+
+function closePinModal() {
+  document.getElementById('pin-overlay').style.display = 'none';
+  modalPin = null;
+}
+
+document.getElementById('pin-modal-close').addEventListener('click', closePinModal);
+document.getElementById('pin-overlay').addEventListener('click', function(e) {
+  if (e.target === document.getElementById('pin-overlay')) closePinModal();
+});
+
+document.getElementById('add-shape-btn').addEventListener('click', function() {
+  modalShapes.push({ type: modalShapeType, color: modalShapeColor });
+  renderShapesList();
+});
+
+document.getElementById('upload-area').addEventListener('click', function() {
+  document.getElementById('img-input').click();
+});
+
+document.getElementById('img-input').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const img = new Image();
+    img.onload = function() {
+      const MAX = 900;
+      let w = img.width, h = img.height;
+      if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+      if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+      const cvs = document.createElement('canvas');
+      cvs.width = w; cvs.height = h;
+      cvs.getContext('2d').drawImage(img, 0, 0, w, h);
+      modalImageData = cvs.toDataURL('image/jpeg', 0.82);
+      const prev = document.getElementById('img-preview');
+      prev.src = modalImageData;
+      prev.style.display = 'block';
+      document.getElementById('img-remove').style.display = 'flex';
+      document.getElementById('upload-area').style.display = 'none';
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+});
+
+document.getElementById('img-remove').addEventListener('click', function() {
+  modalImageData = null;
+  const prev = document.getElementById('img-preview');
+  prev.src = '';
+  prev.style.display = 'none';
+  document.getElementById('img-remove').style.display = 'none';
+  document.getElementById('upload-area').style.display = 'block';
+});
+
+document.getElementById('pin-save').addEventListener('click', function() {
+  const title = document.getElementById('pin-title').value.trim();
+  const content = document.getElementById('pin-content').value.trim();
+  const tag = document.getElementById('pin-tag').value.trim();
+  const board = activeCurBoard();
+  if (!board) return;
+
+  if (modalPin) {
+    Object.assign(modalPin, {
+      title: title,
+      content: content,
+      tag: tag,
+      colorIdx: modalColorIdx,
+      image: modalImageData,
+      shapes: modalShapes
+    });
+    saveData();
+    const existing = document.getElementById('pin-' + modalPin.id);
+    if (existing) existing.remove();
+    renderPinEl(modalPin);
+  } else {
+    const pin = {
+      id: uid(),
+      title: title,
+      content: content,
+      tag: tag,
+      image: modalImageData,
+      colorIdx: modalColorIdx,
+      x: findFreeSpot(board.pins),
+      y: 60,
+      width: 220,
+      shapes: modalShapes
+    };
+    board.pins.push(pin);
+    saveData();
+    renderPinEl(pin);
+    document.getElementById('canvas-empty').style.display = 'none';
+  }
+  closePinModal();
+});
+
+function findFreeSpot(pins) {
+  let x = 60;
+  var taken = pins.map(function(p) { return p.x; });
+  while (taken.some(function(tx) { return Math.abs(tx - x) < 30; })) {
+    x += 240;
+  }
+  return x;
+}
+
+// ===== NEW BOARD MODAL =====
+function openNewBoardModal() {
+  document.getElementById('new-board-name').value = '';
+  document.getElementById('board-overlay').style.display = 'flex';
+  setTimeout(function() { document.getElementById('new-board-name').focus(); }, 50);
+}
+
+document.getElementById('board-modal-close').addEventListener('click', function() {
+  document.getElementById('board-overlay').style.display = 'none';
+});
+document.getElementById('board-overlay').addEventListener('click', function(e) {
+  if (e.target === document.getElementById('board-overlay')) {
+    document.getElementById('board-overlay').style.display = 'none';
+  }
+});
+document.getElementById('board-save').addEventListener('click', function() {
+  const name = document.getElementById('new-board-name').value.trim();
+  if (!name) return;
+  const board = { id: uid(), name: name, pins: [] };
+  data.boards.push(board);
+  saveData();
+  document.getElementById('board-overlay').style.display = 'none';
+  renderBoards();
+});
+document.getElementById('new-board-name').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') document.getElementById('board-save').click();
+});
+
+// ===== FAB =====
+document.getElementById('fab').addEventListener('click', function() {
+  openPinModal(null);
+});
+
+// ===== BACK BUTTON =====
+document.getElementById('board-back').addEventListener('click', function() {
+  data.view = 'home';
+  data.curBoard = null;
+  saveData();
+  renderHome();
+});
+
+// ===== SEARCH =====
+document.getElementById('search-btn').addEventListener('click', function() {
+  document.getElementById('search-overlay').style.display = 'block';
+  document.getElementById('search-input').value = '';
+  showSearchEmpty('');
+  setTimeout(function() { document.getElementById('search-input').focus(); }, 50);
+});
+
+document.getElementById('search-overlay').addEventListener('click', function(e) {
+  if (e.target === document.getElementById('search-overlay')) closeSearch();
+});
+
+function closeSearch() {
+  document.getElementById('search-overlay').style.display = 'none';
+}
+
+document.getElementById('search-input').addEventListener('input', function(e) {
+  const q = e.target.value.trim();
+  if (q) renderSearchResults(q);
+  else showSearchEmpty('');
+});
+
+function showSearchEmpty(q) {
+  document.getElementById('search-results').innerHTML =
+    `<div id="search-empty">${q ? 'No results found.' : 'Start typing to search...'}</div>`;
+}
+
+function renderSearchResults(q) {
+  const ql = q.toLowerCase();
+  const matchBoards = data.boards.filter(function(b) {
+    return b.name.toLowerCase().includes(ql);
+  });
+  const matchPins = [];
+  data.boards.forEach(function(board) {
+    (board.pins || []).forEach(function(pin) {
+      if ((pin.title || '').toLowerCase().includes(ql) ||
+          (pin.content || '').toLowerCase().includes(ql) ||
+          (pin.tag || '').toLowerCase().includes(ql)) {
+        matchPins.push({ pin: pin, board: board });
+      }
+    });
+  });
+
+  if (!matchBoards.length && !matchPins.length) {
+    showSearchEmpty(q);
+    return;
+  }
+
+  let html = '';
+  if (matchBoards.length) {
+    html += '<div class="search-section-title">Boards</div>';
+    matchBoards.forEach(function(b) {
+      const c = b.pins && b.pins[0] ? COLORS[b.pins[0].colorIdx || 0].bar : '#ccc';
+      html += `<div class="search-result-item" data-action="board" data-id="${b.id}">
+        <div class="sr-thumb"><div class="sr-thumb-color" style="background:${c}"></div></div>
+        <div class="sr-info">
+          <div class="sr-title">${esc(b.name)}</div>
+          <div class="sr-sub">${b.pins.length} pins</div>
+        </div>
+      </div>`;
+    });
+  }
+  if (matchPins.length) {
+    html += '<div class="search-section-title">Pins</div>';
+    matchPins.forEach(function(item) {
+      const pin = item.pin, board = item.board;
+      const c = COLORS[pin.colorIdx || 0];
+      const snippet = (pin.content || '').slice(0, 60);
+      html += `<div class="search-result-item" data-action="pin" data-board="${board.id}" data-pin="${pin.id}">
+        <div class="sr-thumb"><div class="sr-thumb-color" style="background:${c.bar}"></div></div>
+        <div class="sr-info">
+          <div class="sr-title">${esc(pin.title || '(no title)')}</div>
+          <div class="sr-sub">${snippet ? esc(snippet) + ' &middot; ' : ''}in ${esc(board.name)}</div>
+        </div>
+      </div>`;
+    });
+  }
+
+  const res = document.getElementById('search-results');
+  res.innerHTML = html;
+
+  res.querySelectorAll('.search-result-item').forEach(function(item) {
+    item.addEventListener('click', function() {
+      const action = item.dataset.action;
+      if (action === 'board') {
+        closeSearch();
+        openBoard(item.dataset.id);
+      } else if (action === 'pin') {
+        closeSearch();
+        const boardId = item.dataset.board;
+        const pinId = item.dataset.pin;
+        openBoard(boardId);
+        setTimeout(function() {
+          const pinEl = document.getElementById('pin-' + pinId);
+          if (pinEl) {
+            const board = getBoard(boardId);
+            const pin = board && board.pins.find(function(p) { return p.id === pinId; });
+            if (pin) {
+              document.getElementById('canvas-wrap').scrollTo({
+                left: Math.max(0, pin.x - 100),
+                top: Math.max(0, pin.y - 100),
+                behavior: 'smooth'
+              });
+            }
+            pinEl.classList.add('pin-highlight');
+            setTimeout(function() { pinEl.classList.remove('pin-highlight'); }, 1800);
+          }
+        }, 120);
+      }
+    });
+  });
+}
+
+// ===== KEYBOARD =====
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    if (document.getElementById('search-overlay').style.display === 'block') { closeSearch(); return; }
+    if (document.getElementById('pin-overlay').style.display === 'flex') { closePinModal(); return; }
+    if (document.getElementById('board-overlay').style.display === 'flex') {
+      document.getElementById('board-overlay').style.display = 'none'; return;
+    }
+  }
+});
+
+// ===== PWA =====
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(function(){});
+}
+
+let deferredInstall = null;
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  deferredInstall = e;
+  document.getElementById('install-btn').style.display = 'flex';
+});
+
+document.getElementById('install-btn').addEventListener('click', async function() {
+  if (!deferredInstall) return;
+  deferredInstall.prompt();
+  const result = await deferredInstall.userChoice;
+  if (result.outcome === 'accepted') {
+    document.getElementById('install-btn').style.display = 'none';
+  }
+  deferredInstall = null;
+});
+
+window.addEventListener('appinstalled', function() {
+  document.getElementById('install-btn').style.display = 'none';
+  deferredInstall = null;
+});
+
+document.getElementById('new-board-header-btn').addEventListener('click', openNewBoardModal);
+
+// ===== INIT =====
+loadData();
+if (data.view === 'board' && data.curBoard && getBoard(data.curBoard)) {
+  openBoard(data.curBoard);
+} else {
+  data.view = 'home';
+  data.curBoard = null;
+  renderHome();
+}
+</script>
+
+</body>
+</html>
