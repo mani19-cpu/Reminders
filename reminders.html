@@ -369,9 +369,7 @@ input[type=file]{display:none}
     <button class="icon-btn" id="install-btn" title="Add to Phone" style="display:none">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18" stroke-linecap="round" stroke-width="2.5"/></svg>
     </button>
-    <button class="icon-btn" id="howto-btn" title="Add to Home Screen">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12l7-7 7 7"/></svg>
-    </button>
+    <button id="new-board-header-btn" title="New Board" style="display:none;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;border:none;background:var(--red);color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;">+ New Board</button>
   </div>
 </div>
 
@@ -462,39 +460,6 @@ input[type=file]{display:none}
   </div>
 </div>
 
-<!-- HOW TO INSTALL MODAL -->
-<div id="howto-overlay" class="overlay" style="display:none">
-  <div class="modal" style="max-width:420px">
-    <div class="modal-header">
-      <h2>Add to Your Phone</h2>
-      <button class="modal-close" id="howto-close">&times;</button>
-    </div>
-    <div class="modal-body" style="gap:18px;display:flex;flex-direction:column">
-      <p style="font-size:.9rem;color:var(--muted);line-height:1.6">To install Reminders on your phone, first host the files online (e.g. GitHub Pages), then open the link in your mobile browser.</p>
-      <div style="background:#f5f3ef;border-radius:12px;padding:14px 16px">
-        <div style="font-size:.78rem;font-weight:700;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.04em">iPhone / iPad (Safari)</div>
-        <ol style="font-size:.88rem;line-height:1.9;padding-left:18px;color:var(--text)">
-          <li>Open the site in <strong>Safari</strong></li>
-          <li>Tap the <strong>Share</strong> button <span style="font-size:1rem">⎋</span></li>
-          <li>Scroll down and tap <strong>"Add to Home Screen"</strong></li>
-          <li>Tap <strong>Add</strong></li>
-        </ol>
-      </div>
-      <div style="background:#f5f3ef;border-radius:12px;padding:14px 16px">
-        <div style="font-size:.78rem;font-weight:700;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.04em">Android (Chrome)</div>
-        <ol style="font-size:.88rem;line-height:1.9;padding-left:18px;color:var(--text)">
-          <li>Open the site in <strong>Chrome</strong></li>
-          <li>Tap the <strong>⋮ menu</strong></li>
-          <li>Tap <strong>"Add to Home Screen"</strong></li>
-          <li>Tap <strong>Add</strong></li>
-        </ol>
-      </div>
-      <div style="background:#eef2ff;border-radius:12px;padding:12px 14px;font-size:.82rem;color:#4338ca;line-height:1.55">
-        💡 <strong>Quick host option:</strong> Upload <code style="background:#e0e7ff;padding:1px 5px;border-radius:4px">reminders.html</code>, <code style="background:#e0e7ff;padding:1px 5px;border-radius:4px">manifest.json</code>, <code style="background:#e0e7ff;padding:1px 5px;border-radius:4px">icon.svg</code> and <code style="background:#e0e7ff;padding:1px 5px;border-radius:4px">sw.js</code> to <strong>GitHub Pages</strong> for a free permanent link.
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- SEARCH OVERLAY -->
 <div id="search-overlay" style="display:none">
@@ -599,6 +564,7 @@ function renderHome() {
   document.getElementById('board-back').style.display = 'none';
   document.getElementById('board-title').textContent = '';
   document.getElementById('logo-text').style.display = '';
+  document.getElementById('new-board-header-btn').style.display = 'flex';
   renderBoards();
 }
 
@@ -636,11 +602,6 @@ function renderBoards() {
     setupBoardDrag(card, idx);
     grid.appendChild(card);
   });
-  const newCard = document.createElement('div');
-  newCard.className = 'new-board-card';
-  newCard.innerHTML = '<div class="plus">+</div><span>New Board</span>';
-  newCard.addEventListener('click', openNewBoardModal);
-  grid.appendChild(newCard);
 }
 
 function buildBoardCardHTML(board) {
@@ -797,6 +758,7 @@ function openBoard(id) {
   document.getElementById('board-back').style.display = 'flex';
   document.getElementById('board-title').textContent = board.name;
   document.getElementById('logo-text').style.display = 'none';
+  document.getElementById('new-board-header-btn').style.display = 'none';
   renderCanvas();
 }
 
@@ -1468,9 +1430,7 @@ document.addEventListener('keydown', function(e) {
     if (document.getElementById('board-overlay').style.display === 'flex') {
       document.getElementById('board-overlay').style.display = 'none'; return;
     }
-    if (document.getElementById('howto-overlay').style.display === 'flex') {
-      document.getElementById('howto-overlay').style.display = 'none'; return;
-    }
+
   }
 });
 
@@ -1501,17 +1461,7 @@ window.addEventListener('appinstalled', function() {
   deferredInstall = null;
 });
 
-document.getElementById('howto-btn').addEventListener('click', function() {
-  document.getElementById('howto-overlay').style.display = 'flex';
-});
-document.getElementById('howto-close').addEventListener('click', function() {
-  document.getElementById('howto-overlay').style.display = 'none';
-});
-document.getElementById('howto-overlay').addEventListener('click', function(e) {
-  if (e.target === document.getElementById('howto-overlay')) {
-    document.getElementById('howto-overlay').style.display = 'none';
-  }
-});
+document.getElementById('new-board-header-btn').addEventListener('click', openNewBoardModal);
 
 // ===== INIT =====
 loadData();
